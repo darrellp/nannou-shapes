@@ -75,7 +75,7 @@ mod draw {
             pt_center.y = boundary.bottom() - cell_height / 2.0;
             for _ in 0..model.grid_count_y {
                 pt_center.y += cell_height;
-                if (MyRandom::get_float() < model.pct_circles)
+                if MyRandom::get_float() < model.pct_circles
                 {
                     draw_circle_from_size_ctr(&draw, pt_center, shape_size);
                 }
@@ -100,7 +100,6 @@ mod draw {
             .points(v1, v2, v3, v4);
     }
     fn draw_circle_from_size_ctr(draw: &Draw, center: Point2, size: f32) {
-        let size_d2 = size / 2.0;
         draw.ellipse()
             .color(RED)
             .w(size)
