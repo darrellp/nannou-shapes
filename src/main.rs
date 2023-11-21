@@ -32,6 +32,7 @@ mod draw {
         base_size: f32,
         max_scale: f32,
         pct_circles: f32,
+        handle_mouse: bool,
         rng_seed: u64,
     }
 
@@ -43,6 +44,7 @@ mod draw {
                 base_size: 0.7,
                 max_scale: 1.0,
                 pct_circles: 0.5,
+                handle_mouse: true,
                 rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
             }
         }
@@ -79,8 +81,8 @@ mod draw {
     }
 
     fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
-        if button == MouseButton::Left {
-            model.settings.rng_seed = app.elapsed_frames();
+        if button == MouseButton::Left && model.settings.handle_mouse {
+            reseed(app, &mut model.settings);
         }
     }
 
@@ -90,24 +92,30 @@ mod draw {
         }
     }
 
-    fn update(_app: &App, model: &mut Model, update: Update) {
+    fn reseed(app: &App, settings: &mut Settings) {
+        settings.rng_seed = app.elapsed_frames();
+    }
+
+    fn update(app: &App, model: &mut Model, update: Update) {
         let egui = &mut model.egui;
         let settings = &mut model.settings;
 
-        if model.show_ui {
-            egui.set_elapsed_time(update.since_start);
-            let ctx = egui.begin_frame();
-            egui::Window::new("Shapes Settings").show(&ctx, |ui| {
-                ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
-                    .text("X Count"));
-                ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100)
-                    .text("Y Count"));
-                ui.add(egui::Slider::new(&mut settings.base_size, 0.0..=2.0)
-                    .text("Base Size"));
-                ui.add(egui::Slider::new(&mut settings.max_scale, 1.0..=5.0)
-                    .text("Max Scale"));
-            });
-        }
+        egui.set_elapsed_time(update.since_start);
+        let ctx = egui.begin_frame();
+
+        // Only use mouse to reset seed if we're not over the ui
+        settings.handle_mouse = !ctx.is_pointer_over_area();
+
+        egui::Window::new("Shapes Settings").show(&ctx, |ui| {
+            ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
+                .text("X Count"));
+            ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100)
+                .text("Y Count"));
+            ui.add(egui::Slider::new(&mut settings.base_size, 0.0..=2.0)
+                .text("Base Size"));
+            ui.add(egui::Slider::new(&mut settings.max_scale, 1.0..=5.0)
+                .text("Max Scale"));
+        });
     }
 
     fn model(app: &App) -> Model {
