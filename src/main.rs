@@ -5,35 +5,16 @@ extern crate log;
 mod my_random;
 
 fn main() {
-    draw::draw();
+    draw::main();
 }
 
 mod draw {
     use log::LevelFilter;
     use nannou::prelude::*;
     use crate::my_random::MyRandom;
+    use nannou_egui::{self, egui, Egui};
 
-    struct Model {
-        grid_count_x: usize,
-        grid_count_y: usize,
-        base_scale: f32,
-        pct_circles: f32,
-        rng_seed: u64,
-    }
-
-    impl Default for Model {
-        fn default() -> Self {
-            Self{
-                grid_count_x: 20,
-                grid_count_y: 20,
-                base_scale: 0.7,
-                pct_circles: 0.5,
-                rng_seed: 100,
-            }
-        }
-    }
-
-    pub fn draw() {
+    pub fn main() {
         env_logger::builder()
             .format_level(false)
             .format_target(false)
@@ -41,21 +22,86 @@ mod draw {
             .filter(Some("nannou_00::draw"), LevelFilter::Trace)
             .init();
 
-        nannou::app(model)
-            .event(event)
-            .simple_window(view)
-            .run();
+        nannou::app(model).update(update).run();
     }
 
-    fn model(_app: &App) -> Model {
-        Model::default()
+
+    struct Settings {
+        grid_count_x: usize,
+        grid_count_y: usize,
+        base_scale: f32,
+        pct_circles: f32,
+        rng_seed: u64,
     }
 
-    fn event(_app: &App, _model: &mut Model, _event: Event) {}
+    impl Default for Settings {
+        fn default() -> Self {
+            Self{
+                grid_count_x: 20,
+                grid_count_y: 20,
+                base_scale: 0.7,
+                pct_circles: 0.5,
+                rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
+            }
+        }
+    }
+
+    struct Model {
+        settings: Settings,
+        egui: Egui,
+    }
+
+    impl Model {
+        pub fn new(app: &App) -> Self {
+            let window_id = app
+                .new_window()
+                .mouse_pressed(mouse_pressed)
+                .view(view)
+                .raw_event(raw_window_event)
+                .build()
+                .unwrap();
+            let window = app.window(window_id).unwrap();
+            let egui = Egui::from_window(&window);
+            Self {
+                settings: Settings::default(),
+                egui
+            }
+        }
+    }
+
+    fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
+        model.egui.handle_raw_event(event);
+    }
+
+
+    fn mouse_pressed(app: &App, model_window: &mut Model, button: MouseButton) {
+        if button == MouseButton::Left {
+            model_window.settings.rng_seed = app.elapsed_frames();
+        }
+    }
+
+    fn update(_app: &App, model: &mut Model, update: Update) {
+        let egui = &mut model.egui;
+        let settings = &mut model.settings;
+
+        egui.set_elapsed_time(update.since_start);
+        let ctx = egui.begin_frame();
+        egui::Window::new("Shapes Settings").show(&ctx, |ui| {
+            ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100).text("X Count"));
+            ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100).text("Y Count"));
+        });
+    }
+
+
+    fn model(app: &App) -> Model {
+        Model::new(app)
+    }
 
     fn view(app: &App, model: &Model, frame: Frame) {
+        let shapes_info = &model.settings;
+
         // For consistent results from frame to frame
-        MyRandom::seed_from_u64(model.rng_seed);
+        MyRandom::seed_from_u64(shapes_info.rng_seed);
 
         // Prepare to draw.
         let draw = app.draw();
@@ -64,18 +110,18 @@ mod draw {
 
         // Get boundary of the window (to constrain the movements of our circle)
         let boundary = app.window_rect();
-        let cell_width: f32 = (boundary.right() - boundary.left()) / model.grid_count_x as f32;
-        let cell_height: f32 = (boundary.top() - boundary.bottom()) / model.grid_count_y as f32;
+        let cell_width: f32 = (boundary.right() - boundary.left()) / shapes_info.grid_count_x as f32;
+        let cell_height: f32 = (boundary.top() - boundary.bottom()) / shapes_info.grid_count_y as f32;
         let cell_size = f32::min(cell_width, cell_height);
-        let shape_size = cell_size * model.base_scale;
+        let shape_size = cell_size * shapes_info.base_scale;
         let mut pt_center = boundary.bottom_left() + Point2::new(-cell_width / 2.0, -cell_height / 2.0);
 
-        for _ in 0..model.grid_count_x {
+        for _ in 0..shapes_info.grid_count_x {
             pt_center.x += cell_width;
             pt_center.y = boundary.bottom() - cell_height / 2.0;
-            for _ in 0..model.grid_count_y {
+            for _ in 0..shapes_info.grid_count_y {
                 pt_center.y += cell_height;
-                if MyRandom::get_float() < model.pct_circles
+                if MyRandom::get_float() < shapes_info.pct_circles
                 {
                     draw_circle_from_size_ctr(&draw, pt_center, shape_size);
                 }
@@ -87,6 +133,7 @@ mod draw {
         }
 
         draw.to_frame(app, &frame).unwrap();
+        model.egui.draw_to_frame(&frame).unwrap();
     }
 
     fn draw_quad_from_size_ctr(draw: &Draw, center: Point2, size: f32) {
