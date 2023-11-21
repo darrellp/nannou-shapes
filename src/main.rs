@@ -25,7 +25,6 @@ mod draw {
         nannou::app(model).update(update).run();
     }
 
-
     struct Settings {
         grid_count_x: usize,
         grid_count_y: usize,
@@ -105,6 +104,10 @@ mod draw {
 
         // Only use mouse to reset seed if we're not over the ui
         settings.handle_mouse = !ctx.is_pointer_over_area();
+
+        if !model.show_ui {
+            return;
+        }
 
         egui::Window::new("Shapes Settings").show(&ctx, |ui| {
             ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
