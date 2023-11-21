@@ -78,7 +78,6 @@ mod draw {
         model.egui.handle_raw_event(event);
     }
 
-
     fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
         if button == MouseButton::Left {
             model.settings.rng_seed = app.elapsed_frames();
@@ -111,7 +110,6 @@ mod draw {
         }
     }
 
-
     fn model(app: &App) -> Model {
         Model::new(app)
     }
@@ -135,7 +133,8 @@ mod draw {
         let shape_size = cell_size * shapes_info.base_size;
         let mut pt_center = boundary.bottom_left() + Point2::new(-cell_width / 2.0, -cell_height / 2.0);
 
-        let mut positions: Vec<Point2> = vec![];
+        let mut positions: Vec<Point2> = Vec::with_capacity(
+            shapes_info.grid_count_x * shapes_info.grid_count_y);
         for _ in 0..shapes_info.grid_count_x {
             pt_center.x += cell_width;
             pt_center.y = boundary.bottom() - cell_height / 2.0;
