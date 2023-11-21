@@ -49,6 +49,7 @@ mod draw {
     struct Model {
         settings: Settings,
         egui: Egui,
+        show_ui: bool
     }
 
     impl Model {
@@ -56,6 +57,7 @@ mod draw {
             let window_id = app
                 .new_window()
                 .mouse_pressed(mouse_pressed)
+                .key_released(key_pressed)
                 .view(view)
                 .raw_event(raw_window_event)
                 .build()
@@ -64,6 +66,7 @@ mod draw {
             let egui = Egui::from_window(&window);
             Self {
                 settings: Settings::default(),
+                show_ui: true,
                 egui
             }
         }
@@ -74,9 +77,15 @@ mod draw {
     }
 
 
-    fn mouse_pressed(app: &App, model_window: &mut Model, button: MouseButton) {
+    fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
         if button == MouseButton::Left {
-            model_window.settings.rng_seed = app.elapsed_frames();
+            model.settings.rng_seed = app.elapsed_frames();
+        }
+    }
+
+    fn key_pressed(_app: &App, model: &mut Model, key: Key) {
+        if key == Key::U {
+            model.show_ui = !model.show_ui;
         }
     }
 
@@ -84,12 +93,16 @@ mod draw {
         let egui = &mut model.egui;
         let settings = &mut model.settings;
 
-        egui.set_elapsed_time(update.since_start);
-        let ctx = egui.begin_frame();
-        egui::Window::new("Shapes Settings").show(&ctx, |ui| {
-            ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100).text("X Count"));
-            ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100).text("Y Count"));
-        });
+        if model.show_ui {
+            egui.set_elapsed_time(update.since_start);
+            let ctx = egui.begin_frame();
+            egui::Window::new("Shapes Settings").show(&ctx, |ui| {
+                ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
+                    .text("X Count"));
+                ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100)
+                    .text("Y Count"));
+            });
+        }
     }
 
 
@@ -108,7 +121,7 @@ mod draw {
         // Clear the background.
         draw.background().color(BLACK);
 
-        // Get boundary of the window (to constrain the movements of our circle)
+        // Get boundary of the window to size everything correctly
         let boundary = app.window_rect();
         let cell_width: f32 = (boundary.right() - boundary.left()) / shapes_info.grid_count_x as f32;
         let cell_height: f32 = (boundary.top() - boundary.bottom()) / shapes_info.grid_count_y as f32;
@@ -133,7 +146,8 @@ mod draw {
         }
 
         draw.to_frame(app, &frame).unwrap();
-        model.egui.draw_to_frame(&frame).unwrap();
+        if model.show_ui {
+            model.egui.draw_to_frame(&frame).unwrap();}
     }
 
     fn draw_quad_from_size_ctr(draw: &Draw, center: Point2, size: f32) {
