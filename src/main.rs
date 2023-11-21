@@ -29,7 +29,8 @@ mod draw {
     struct Settings {
         grid_count_x: usize,
         grid_count_y: usize,
-        base_scale: f32,
+        base_size: f32,
+        max_scale: f32,
         pct_circles: f32,
         rng_seed: u64,
     }
@@ -39,7 +40,8 @@ mod draw {
             Self{
                 grid_count_x: 20,
                 grid_count_y: 20,
-                base_scale: 0.7,
+                base_size: 0.7,
+                max_scale: 1.0,
                 pct_circles: 0.5,
                 rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
             }
@@ -101,6 +103,10 @@ mod draw {
                     .text("X Count"));
                 ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100)
                     .text("Y Count"));
+                ui.add(egui::Slider::new(&mut settings.base_size, 0.0..=2.0)
+                    .text("Base Size"));
+                ui.add(egui::Slider::new(&mut settings.max_scale, 1.0..=5.0)
+                    .text("Max Scale"));
             });
         }
     }
@@ -126,22 +132,33 @@ mod draw {
         let cell_width: f32 = (boundary.right() - boundary.left()) / shapes_info.grid_count_x as f32;
         let cell_height: f32 = (boundary.top() - boundary.bottom()) / shapes_info.grid_count_y as f32;
         let cell_size = f32::min(cell_width, cell_height);
-        let shape_size = cell_size * shapes_info.base_scale;
+        let shape_size = cell_size * shapes_info.base_size;
         let mut pt_center = boundary.bottom_left() + Point2::new(-cell_width / 2.0, -cell_height / 2.0);
 
+        let mut positions: Vec<Point2> = vec![];
         for _ in 0..shapes_info.grid_count_x {
             pt_center.x += cell_width;
             pt_center.y = boundary.bottom() - cell_height / 2.0;
             for _ in 0..shapes_info.grid_count_y {
                 pt_center.y += cell_height;
-                if MyRandom::get_float() < shapes_info.pct_circles
-                {
-                    draw_circle_from_size_ctr(&draw, pt_center, shape_size);
-                }
-                else
-                {
-                    draw_quad_from_size_ctr(&draw, pt_center, shape_size);
-                }
+                positions.push(pt_center);
+            }
+        }
+
+        for i in 0..positions.len() - 1 {
+            let swap_index = MyRandom::from_range(i, positions.len() - 1);
+            (positions[i], positions[swap_index]) = (positions[swap_index], positions[i]);
+        }
+        for pt_center in positions {
+            let scale = MyRandom::get_float() * (shapes_info.max_scale - 1.0) + 1.0;
+            let cur_size = shape_size * scale;
+            if MyRandom::get_float() < shapes_info.pct_circles
+            {
+                draw_circle_from_size_ctr(&draw, pt_center, cur_size);
+            }
+            else
+            {
+                draw_quad_from_size_ctr(&draw, pt_center, cur_size);
             }
         }
 
