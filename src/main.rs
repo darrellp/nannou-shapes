@@ -10,6 +10,7 @@ fn main() {
 
 mod draw {
     use log::LevelFilter;
+    use nannou::color::IntoColor;
     use nannou::prelude::*;
     use crate::my_random::MyRandom;
     use nannou_egui::{self, egui, Egui};
@@ -34,24 +35,100 @@ mod draw {
         handle_mouse: bool,
         alpha: u8,
         rng_seed: u64,
-        circle_color: [[u8; 3]; 4],
-        square_color: [[u8; 3]; 4],
+        circle_info: ColorInfo,
+        square_info: ColorInfo,
     }
 
     impl Default for Settings {
         fn default() -> Self {
+            let blue = Rgb::new(0.0, 0.0, 1.0);
+            let black = Rgb::new(0.0, 0.0, 0.0);
+            let square_color_info = ColorInfo {
+                colors: [blue, black, black, black],
+                ..Default::default()
+            };
             Self{
-                grid_count_x: 20,
+                grid_count_x: 27,
                 grid_count_y: 20,
                 base_size: 0.7,
                 max_scale: 1.0,
                 pct_circles: 0.5,
                 handle_mouse: true,
                 alpha: 255u8,
-                circle_color: [[255_u8, 0_u8, 0_u8], [0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8]],
-                square_color: [[0_u8, 0_u8, 255_u8], [0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8]],
-
+                circle_info: ColorInfo::default(),
+                square_info: square_color_info,
                 rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
+            }
+        }
+    }
+
+    struct ColorInfo {
+        colors: [nannou::color::Rgb<f32>; 4],
+        enabled: [bool; 4],
+        h_rnd: f32,
+        s_rnd: f32,
+        v_rnd: f32,
+    }
+
+    impl ColorInfo {
+        pub fn pick_color(&self) -> (u8, u8, u8) {
+            let mut enabled_colors = Vec::<Rgb<f32>>::with_capacity(4);
+            for i in 0..4 {
+                if self.enabled[i] {
+                    enabled_colors.push(self.colors[i]);
+                }
+            }
+            if enabled_colors.len() == 0 {
+                return (0_u8, 0_u8, 0_u8);
+            }
+            let base = self.colors[MyRandom::from_range(0, enabled_colors.len())];
+            if self.h_rnd <= 0.0 && self.s_rnd <= 0.0 && self.v_rnd <= 0.0 {
+                let (r, g, b) = base.into_components();
+                return ((r * 255.9) as u8, (g * 255.9) as u8, (b * 255.9) as u8);
+            }
+
+            let hsv: Hsv = base.into_hsv();
+            let (mut h, mut s, mut v) = hsv.into();
+            if self.h_rnd > 0.0 {
+                h += (MyRandom::get_float() - 0.5) * self.h_rnd * 360.0;
+                let degrees = h.to_positive_degrees();
+                if degrees > 360.0 {
+                    h -= 360.0;
+                }
+            }
+            if self.s_rnd > 0.0 {
+                s += MyRandom::get_float() * self.s_rnd - self.s_rnd / 2.0;
+                if s < 0.0 {
+                    s = 0.0;
+                } else if s > 1.0 {
+                    s = 1.0;
+                }
+            }
+            if self.v_rnd > 0.0 {
+                v += MyRandom::get_float() * self.v_rnd - self.v_rnd / 2.0;
+                if v < 0.0 {
+                    v = 0.0;
+                } else if v > 1.0 {
+                    v = 1.0;
+                }
+            }
+            let hsv = Hsv::new(h, s, v);
+            let rgb = hsv.into_rgb::<nannou::color::encoding::Srgb>();
+            let (r, g, b) = rgb.into_components();
+            ((r * 255.9) as u8, (g * 255.9) as u8, (b * 255.9) as u8)
+        }
+    }
+
+    impl Default for ColorInfo {
+        fn default() -> Self {
+            let red = Rgb::new(1.0, 0.0, 0.0);
+            let black = Rgb::new(0.0, 0.0, 0.0);
+            Self {
+                colors: [red, black, black, black],
+                enabled: [true, false, false, false],
+                h_rnd: 0.0,
+                s_rnd: 0.0,
+                v_rnd: 0.0,
             }
         }
     }
@@ -102,6 +179,16 @@ mod draw {
         settings.rng_seed = app.elapsed_frames();
     }
 
+    #[inline]
+    fn rgb_to_array(rgb: Rgb<f32>) -> [f32; 3] {
+        [rgb.red, rgb.green, rgb.blue]
+    }
+
+    #[inline]
+    fn array_to_rgb(array: [f32; 3]) -> Rgb<f32> {
+        Rgb::new(array[0], array[1], array[2])
+    }
+
     fn update(_app: &App, model: &mut Model, update: Update) {
         let egui = &mut model.egui;
         let settings = &mut model.settings;
@@ -121,21 +208,58 @@ mod draw {
                 .show(ui, |ui| {
                     ui.add(egui::Label::new("Square Colors"));
                     ui.horizontal(|ui| {
-                        ui.color_edit_button_srgb(&mut settings.square_color[0]);
-                        ui.color_edit_button_srgb(&mut settings.square_color[1]);
-                        ui.color_edit_button_srgb(&mut settings.square_color[2]);
-                        ui.color_edit_button_srgb(&mut settings.square_color[3]);
+                        let mut a0 = rgb_to_array(settings.square_info.colors[0]);
+                        let mut a1 = rgb_to_array(settings.square_info.colors[1]);
+                        let mut a2 = rgb_to_array(settings.square_info.colors[2]);
+                        let mut a3 = rgb_to_array(settings.square_info.colors[3]);
+                        ui.color_edit_button_rgb(&mut a0);
+                        ui.checkbox(&mut settings.square_info.enabled[0],"");
+                        ui.color_edit_button_rgb(&mut a1);
+                        ui.checkbox(&mut settings.square_info.enabled[1],"");
+                        ui.color_edit_button_rgb(&mut a2);
+                        ui.checkbox(&mut settings.square_info.enabled[2],"");
+                        ui.color_edit_button_rgb(&mut a3);
+                        ui.checkbox(&mut settings.square_info.enabled[3],"");
+                        settings.square_info.colors[0] = array_to_rgb(a0);
+                        settings.square_info.colors[1] = array_to_rgb(a1);
+                        settings.square_info.colors[2] = array_to_rgb(a2);
+                        settings.square_info.colors[3] = array_to_rgb(a3);
                     });
                     ui.end_row();
+                    ui.add(egui::Slider::new(&mut settings.square_info.h_rnd, 0.0..=1.0)
+                        .text("Hue Variation"));
+                    ui.add(egui::Slider::new(&mut settings.square_info.s_rnd, 0.0..=1.0)
+                        .text("Sat Variation"));
+                    ui.add(egui::Slider::new(&mut settings.square_info.v_rnd, 0.0..=1.0)
+                        .text("Value Variation"));
 
-                    ui.add(egui::Label::new("Circle Color"));
+                    ui.add(egui::Label::new("Circle Colors"));
                     ui.horizontal(|ui| {
-                        ui.color_edit_button_srgb(&mut settings.circle_color[0]);
-                        ui.color_edit_button_srgb(&mut settings.circle_color[1]);
-                        ui.color_edit_button_srgb(&mut settings.circle_color[2]);
-                        ui.color_edit_button_srgb(&mut settings.circle_color[3]);
+                        let mut a0 = rgb_to_array(settings.circle_info.colors[0]);
+                        let mut a1 = rgb_to_array(settings.circle_info.colors[1]);
+                        let mut a2 = rgb_to_array(settings.circle_info.colors[2]);
+                        let mut a3 = rgb_to_array(settings.circle_info.colors[3]);
+                        ui.color_edit_button_rgb(&mut a0);
+                        ui.checkbox(&mut settings.circle_info.enabled[0],"");
+                        ui.color_edit_button_rgb(&mut a1);
+                        ui.checkbox(&mut settings.circle_info.enabled[1],"");
+                        ui.color_edit_button_rgb(&mut a2);
+                        ui.checkbox(&mut settings.circle_info.enabled[2],"");
+                        ui.color_edit_button_rgb(&mut a3);
+                        ui.checkbox(&mut settings.circle_info.enabled[3],"");
+                        settings.circle_info.colors[0] = array_to_rgb(a0);
+                        settings.circle_info.colors[1] = array_to_rgb(a1);
+                        settings.circle_info.colors[2] = array_to_rgb(a2);
+                        settings.circle_info.colors[3] = array_to_rgb(a3);
                     });
                     ui.end_row();
+                    ui.add(egui::Slider::new(&mut settings.circle_info.h_rnd, 0.0..=1.0)
+                        .text("Hue Variation"));
+                    ui.add(egui::Slider::new(&mut settings.circle_info.s_rnd, 0.0..=1.0)
+                        .text("Sat Variation"));
+                    ui.add(egui::Slider::new(&mut settings.circle_info.v_rnd, 0.0..=1.0)
+                        .text("Value Variation"));
+                    ui.separator();
                 });
             ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
                 .text("X Count"));
@@ -193,14 +317,16 @@ mod draw {
         for pt_center in positions {
             let scale = MyRandom::get_float() * (settings.max_scale - 1.0) + 1.0;
             let cur_size = shape_size * scale;
-            let i_color = MyRandom::from_range(0,4);
+
             if MyRandom::get_float() < settings.pct_circles
             {
-                draw_circle_from_size_ctr(&draw, pt_center, cur_size, settings.circle_color[i_color], settings.alpha);
+                let color: [u8; 3] = settings.circle_info.pick_color().into();
+                draw_circle_from_size_ctr(&draw, pt_center, cur_size, color, settings.alpha);
             }
             else
             {
-                draw_quad_from_size_ctr(&draw, pt_center, cur_size, settings.square_color[i_color], settings.alpha);
+                let color: [u8; 3] = settings.square_info.pick_color().into();
+                draw_quad_from_size_ctr(&draw, pt_center, cur_size, color, settings.alpha);
             }
         }
 
