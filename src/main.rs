@@ -9,13 +9,10 @@ fn main() {
 }
 
 mod draw {
-    use env_logger::fmt::Color;
     use log::LevelFilter;
-    use nannou::image::pnm::ArbitraryTuplType::RGB;
     use nannou::prelude::*;
     use crate::my_random::MyRandom;
     use nannou_egui::{self, egui, Egui};
-    use nannou_egui::egui::Color32;
 
     pub fn main() {
         env_logger::builder()
@@ -37,8 +34,8 @@ mod draw {
         handle_mouse: bool,
         alpha: u8,
         rng_seed: u64,
-        circle_color: [u8; 3],
-        square_color: [u8; 3],
+        circle_color: [[u8; 3]; 4],
+        square_color: [[u8; 3]; 4],
     }
 
     impl Default for Settings {
@@ -51,8 +48,8 @@ mod draw {
                 pct_circles: 0.5,
                 handle_mouse: true,
                 alpha: 255u8,
-                circle_color: [255_u8, 0_u8, 0_u8],
-                square_color: [0_u8, 0_u8, 255_u8],
+                circle_color: [[255_u8, 0_u8, 0_u8], [0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8]],
+                square_color: [[0_u8, 0_u8, 255_u8], [0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8],[0_u8, 0_u8, 0_u8]],
 
                 rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
             }
@@ -122,8 +119,23 @@ mod draw {
         egui::Window::new("Shapes Settings").show(&ctx, |ui| {
             egui::CollapsingHeader::new("Colors")
                 .show(ui, |ui| {
-                    ui.color_edit_button_srgb(&mut settings.square_color);
-                    ui.color_edit_button_srgb(&mut settings.circle_color);
+                    ui.add(egui::Label::new("Square Colors"));
+                    ui.horizontal(|ui| {
+                        ui.color_edit_button_srgb(&mut settings.square_color[0]);
+                        ui.color_edit_button_srgb(&mut settings.square_color[1]);
+                        ui.color_edit_button_srgb(&mut settings.square_color[2]);
+                        ui.color_edit_button_srgb(&mut settings.square_color[3]);
+                    });
+                    ui.end_row();
+
+                    ui.add(egui::Label::new("Circle Color"));
+                    ui.horizontal(|ui| {
+                        ui.color_edit_button_srgb(&mut settings.circle_color[0]);
+                        ui.color_edit_button_srgb(&mut settings.circle_color[1]);
+                        ui.color_edit_button_srgb(&mut settings.circle_color[2]);
+                        ui.color_edit_button_srgb(&mut settings.circle_color[3]);
+                    });
+                    ui.end_row();
                 });
             ui.add(egui::Slider::new(&mut settings.grid_count_x, 1..=100)
                 .text("X Count"));
@@ -181,13 +193,14 @@ mod draw {
         for pt_center in positions {
             let scale = MyRandom::get_float() * (settings.max_scale - 1.0) + 1.0;
             let cur_size = shape_size * scale;
+            let i_color = MyRandom::from_range(0,4);
             if MyRandom::get_float() < settings.pct_circles
             {
-                draw_circle_from_size_ctr(&draw, pt_center, cur_size, settings.circle_color, settings.alpha);
+                draw_circle_from_size_ctr(&draw, pt_center, cur_size, settings.circle_color[i_color], settings.alpha);
             }
             else
             {
-                draw_quad_from_size_ctr(&draw, pt_center, cur_size, settings.square_color, settings.alpha);
+                draw_quad_from_size_ctr(&draw, pt_center, cur_size, settings.square_color[i_color], settings.alpha);
             }
         }
 
