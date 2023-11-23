@@ -35,6 +35,10 @@ mod draw {
         handle_mouse: bool,
         alpha: u8,
         rng_seed: u64,
+        inset_count: u8,
+        fixed_inset_count: bool,
+        inversed_radii: bool,
+
         circle_info: ColorInfo,
         square_info: ColorInfo,
     }
@@ -55,6 +59,9 @@ mod draw {
                 pct_circles: 0.5,
                 handle_mouse: true,
                 alpha: 255u8,
+                inset_count: 1,
+                fixed_inset_count: false,
+                inversed_radii: true,
                 circle_info: ColorInfo::default(),
                 square_info: square_color_info,
                 rng_seed: MyRandom::from_range(1u64,u64::MAX) as u64,
@@ -273,6 +280,14 @@ mod draw {
                 .text("Circles"));
             ui.add(egui::Slider::new(&mut settings.alpha, 0u8..=255u8)
                 .text("Alpha"));
+            ui.add(egui::Slider::new(&mut settings.inset_count, 1u8..=20u8)
+                .text("Inset Count"));
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut settings.fixed_inset_count,"Fixed Inset Count");
+                ui.checkbox(&mut settings.inversed_radii,"Inverse Radii");
+            });
+            ui.end_row();
+
         });
     }
 
@@ -316,17 +331,52 @@ mod draw {
         }
         for pt_center in positions {
             let scale = MyRandom::get_float() * (settings.max_scale - 1.0) + 1.0;
-            let cur_size = shape_size * scale;
+            let mut cur_size = shape_size * scale;
 
+            let insets = if settings.fixed_inset_count {
+                settings.inset_count
+            } else {
+                MyRandom::from_range(1, settings.inset_count + 1)
+            };
+
+            let delta = cur_size / (insets as f32);
             if MyRandom::get_float() < settings.pct_circles
             {
-                let color: [u8; 3] = settings.circle_info.pick_color().into();
-                draw_circle_from_size_ctr(&draw, pt_center, cur_size, color, settings.alpha);
+                for i in 1u8..=insets {
+                    let color: [u8; 3] = settings.circle_info.pick_color().into();
+                    draw_circle_from_size_ctr( & draw,
+                        pt_center,
+                        if settings.inversed_radii {
+                            cur_size / (i as f32)
+                        }
+                        else {
+                            cur_size
+                        },
+                        color,
+                        settings.alpha);
+                    if ! settings.inversed_radii {
+                        cur_size -= delta;
+                    }
+                }
             }
             else
             {
-                let color: [u8; 3] = settings.square_info.pick_color().into();
-                draw_quad_from_size_ctr(&draw, pt_center, cur_size, color, settings.alpha);
+                for i in 1u8..=insets {
+                    let color: [u8; 3] = settings.square_info.pick_color().into();
+                    draw_quad_from_size_ctr(&draw,
+                        pt_center,
+                        if settings.inversed_radii {
+                            cur_size / (i as f32)
+                        }
+                        else {
+                            cur_size
+                        },
+                        color,
+                        settings.alpha);
+                    if !settings.inversed_radii {
+                        cur_size -= delta;
+                    }
+                }
             }
         }
 
