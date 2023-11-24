@@ -88,7 +88,7 @@ mod draw {
             if enabled_colors.len() == 0 {
                 return (0_u8, 0_u8, 0_u8);
             }
-            let base = self.colors[MyRandom::from_range(0, enabled_colors.len())];
+            let base = enabled_colors[MyRandom::from_range(0, enabled_colors.len())];
             if self.h_rnd <= 0.0 && self.s_rnd <= 0.0 && self.v_rnd <= 0.0 {
                 let (r, g, b) = base.into_components();
                 return ((r * 255.9) as u8, (g * 255.9) as u8, (b * 255.9) as u8);
