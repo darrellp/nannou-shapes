@@ -14,6 +14,7 @@ mod draw {
     use nannou::prelude::*;
     use crate::my_random::MyRandom;
     use nannou_egui::{self, egui, Egui};
+    use colourado::{ColorPalette, PaletteType};
 
     pub fn main() {
         env_logger::builder()
@@ -233,6 +234,18 @@ mod draw {
                         settings.square_info.colors[3] = array_to_rgb(a3);
                     });
                     ui.end_row();
+                    if ui.add(egui::Button::new("Randomize")).clicked() {
+                        let palette = ColorPalette::new(4, PaletteType::Random, false);
+                        settings.square_info.colors[0] = array_to_rgb(palette.colors[0].to_array());
+                        settings.square_info.colors[1] = array_to_rgb(palette.colors[1].to_array());
+                        settings.square_info.colors[2] = array_to_rgb(palette.colors[2].to_array());
+                        settings.square_info.colors[3] = array_to_rgb(palette.colors[3].to_array());
+                        settings.square_info.enabled[0] = true;
+                        settings.square_info.enabled[1] = true;
+                        settings.square_info.enabled[2] = true;
+                        settings.square_info.enabled[3] = true;
+                    }
+
                     ui.add(egui::Slider::new(&mut settings.square_info.h_rnd, 0.0..=1.0)
                         .text("Hue Variation"));
                     ui.add(egui::Slider::new(&mut settings.square_info.s_rnd, 0.0..=1.0)
@@ -260,6 +273,18 @@ mod draw {
                         settings.circle_info.colors[3] = array_to_rgb(a3);
                     });
                     ui.end_row();
+                    if ui.add(egui::Button::new("Randomize")).clicked() {
+                        let palette = ColorPalette::new(4, PaletteType::Random, false);
+                        settings.circle_info.colors[0] = array_to_rgb(palette.colors[0].to_array());
+                        settings.circle_info.colors[1] = array_to_rgb(palette.colors[1].to_array());
+                        settings.circle_info.colors[2] = array_to_rgb(palette.colors[2].to_array());
+                        settings.circle_info.colors[3] = array_to_rgb(palette.colors[3].to_array());
+                        settings.circle_info.enabled[0] = true;
+                        settings.circle_info.enabled[1] = true;
+                        settings.circle_info.enabled[2] = true;
+                        settings.circle_info.enabled[3] = true;
+                    }
+
                     ui.add(egui::Slider::new(&mut settings.circle_info.h_rnd, 0.0..=1.0)
                         .text("Hue Variation"));
                     ui.add(egui::Slider::new(&mut settings.circle_info.s_rnd, 0.0..=1.0)
