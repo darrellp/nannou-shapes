@@ -1,3 +1,11 @@
+// TODO: Perlin Noise affects parameters
+// TODO: Animation
+// TODO: Shape borders
+// TODO: More shape types
+// TODO: Randomize Positions
+// TODO: Randomize Rotations
+// TODO: Inset alpha not increasing towards center because more shapes are drawn there
+
 #![allow(dead_code)]
 extern crate env_logger;
 extern crate log;
@@ -53,7 +61,7 @@ mod draw {
                 ..Default::default()
             };
             Self{
-                grid_count_x: 27,
+                grid_count_x: 20,
                 grid_count_y: 20,
                 base_size: 0.7,
                 max_scale: 1.0,
@@ -151,6 +159,7 @@ mod draw {
         pub fn new(app: &App) -> Self {
             let window_id = app
                 .new_window()
+                .size(860_u32, 860_u32)
                 .mouse_pressed(mouse_pressed)
                 .key_released(key_pressed)
                 .view(view)
@@ -297,7 +306,7 @@ mod draw {
                 .text("X Count"));
             ui.add(egui::Slider::new(&mut settings.grid_count_y, 1..=100)
                 .text("Y Count"));
-            ui.add(egui::Slider::new(&mut settings.base_size, 0.0..=2.0)
+            ui.add(egui::Slider::new(&mut settings.base_size, 0.0..=3.0)
                 .text("Base Size"));
             ui.add(egui::Slider::new(&mut settings.max_scale, 1.0..=5.0)
                 .text("Max Scale"));
@@ -388,16 +397,16 @@ mod draw {
             {
                 for i in 1u8..=insets {
                     let color: [u8; 3] = settings.square_info.pick_color().into();
-                    draw_quad_from_size_ctr(&draw,
-                        pt_center,
-                        if settings.inversed_radii {
+                    draw_rect_from_size_ctr(&draw,
+                                            pt_center,
+                                            if settings.inversed_radii {
                             cur_size / (i as f32)
                         }
                         else {
                             cur_size
                         },
-                        color,
-                        settings.alpha);
+                                            color,
+                                            settings.alpha);
                     if !settings.inversed_radii {
                         cur_size -= delta;
                     }
@@ -410,7 +419,7 @@ mod draw {
             model.egui.draw_to_frame(&frame).unwrap();}
     }
 
-    fn draw_quad_from_size_ctr(draw: &Draw, center: Point2, size: f32, clr: [u8; 3], alpha: u8) {
+    fn draw_rect_from_size_ctr(draw: &Draw, center: Point2, size: f32, clr: [u8; 3], alpha: u8) {
         let (r, g, b) = clr.into();
         draw.rect().rgba8(r, g, b, alpha).w(size).h(size).xy(center);
     }
