@@ -411,15 +411,8 @@ mod draw {
     }
 
     fn draw_quad_from_size_ctr(draw: &Draw, center: Point2, size: f32, clr: [u8; 3], alpha: u8) {
-        let size_d2 = size / 2.0;
-        let v1 = center + Point2::new(size_d2, size_d2);
-        let v2 = center + Point2::new(size_d2, -size_d2);
-        let v3 = center + Point2::new(-size_d2, -size_d2);
-        let v4 = center + Point2::new(-size_d2, size_d2);
         let (r, g, b) = clr.into();
-        draw.quad()
-            .rgba8(r, g, b, alpha)
-            .points(v1, v2, v3, v4);
+        draw.rect().rgba8(r, g, b, alpha).w(size).h(size).xy(center);
     }
     fn draw_circle_from_size_ctr(draw: &Draw, center: Point2, size: f32, clr: [u8; 3], alpha: u8) {
         let (r, g, b) = clr.into();
